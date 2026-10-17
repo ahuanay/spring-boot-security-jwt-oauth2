@@ -1,3 +1,19 @@
+server:
+  port: ${PORT:8081}
+
 spring:
   application:
-    name: spring-boot-security-jwt-oauth2
+    name: auth-service
+  profiles:
+    active: ${PROFILE:dev}
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: alpha
+    tagsSorter: alpha
+  api-docs:
+    path: /v3/api-docs

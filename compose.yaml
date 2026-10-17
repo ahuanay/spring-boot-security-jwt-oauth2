@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres_auth_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: auth_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - red-auth
+
+  auth-service:
+    image: auth-service:dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auth_service_app
+    ports:
+      - "8081:8081"
+    env_file:
+      - .env.docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - red-auth
+
+networks:
+  red-auth:
+    driver: bridge
+
+volumes:
+  pgdata:

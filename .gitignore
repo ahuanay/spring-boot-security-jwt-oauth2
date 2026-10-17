@@ -1,3 +1,17 @@
+# Compiled class files
+*.class
+
+# Log files
+logs/
+*.log
+
+# Package Files #
+*.jar
+*.war
+*.ear
+*.nar
+
+# Maven
 target/
 pom.xml.tag
 pom.xml.releaseBackup
@@ -7,11 +21,30 @@ release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
-# https://maven.apache.org/tools/wrapper/#Usage_with_or_without_Binary_JAR
 .mvn/wrapper/maven-wrapper.jar
 
-# Eclipse m2e generated files
-# Eclipse Core
+# IDE - IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# IDE - Eclipse
 .project
-# JDT-specific (Eclipse Java Development Tools)
 .classpath
+.settings/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+!.env.docker.example
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
