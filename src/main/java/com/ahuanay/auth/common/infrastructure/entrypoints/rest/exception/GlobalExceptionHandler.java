@@ -26,15 +26,15 @@ public class GlobalExceptionHandler extends BaseExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
         String detail = ex.getBindingResult().getFieldErrors().stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
-                .reduce((first, second) -> first + ", " + second)
-                .orElse("Parámetros de entrada no válidos.");
+            .map(error -> error.getField() + ": " + error.getDefaultMessage())
+            .reduce((first, second) -> first + ", " + second)
+            .orElse("Parámetros de entrada no válidos.");
 
         LOGGER.warn("Validation error in request payload: {}", detail);
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "Bad Request", detail);
     }
 
-    @ExceptionHandler({ Exception.class, RuntimeException.class })
+    @ExceptionHandler({Exception.class, RuntimeException.class})
     public ResponseEntity<ErrorResponse> handleGeneralException(Throwable ex) {
         LOGGER.error("An unexpected error occurred in the server: {}", ex.getMessage(), ex);
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", "Ocurrió un error inesperado en el servidor.");

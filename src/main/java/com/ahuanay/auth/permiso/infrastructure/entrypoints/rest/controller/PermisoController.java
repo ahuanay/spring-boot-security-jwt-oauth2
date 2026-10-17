@@ -91,26 +91,26 @@ public class PermisoController {
         @RequestParam(defaultValue = "ASC") String direction
     ) {
         PermisoQuery query = PermisoQuery.builder()
-                .nombre(nombre)
-                .page(page)
-                .size(size)
-                .sortBy(sortBy)
-                .direction(direction)
-                .build();
+            .nombre(nombre)
+            .page(page)
+            .size(size)
+            .sortBy(sortBy)
+            .direction(direction)
+            .build();
 
         PageResponse<PermisoResponse> pageResponse = permisoGetAllUseCase.getAll(query);
 
         List<PermisoRestResponse> restContent = pageResponse.content().stream()
-                .map(permisoRestMapper::toRestResponse)
-                .toList();
+            .map(permisoRestMapper::toRestResponse)
+            .toList();
 
         PageRestResponse<PermisoRestResponse> response = new PageRestResponse<>(
-                restContent,
-                pageResponse.pageNumber(),
-                pageResponse.pageSize(),
-                pageResponse.totalElements(),
-                pageResponse.totalPages(),
-                pageResponse.last()
+            restContent,
+            pageResponse.pageNumber(),
+            pageResponse.pageSize(),
+            pageResponse.totalElements(),
+            pageResponse.totalPages(),
+            pageResponse.last()
         );
 
         return ResponseEntity.ok(response);

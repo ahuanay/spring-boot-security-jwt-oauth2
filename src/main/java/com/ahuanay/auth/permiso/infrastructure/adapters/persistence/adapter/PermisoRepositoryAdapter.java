@@ -33,8 +33,8 @@ public class PermisoRepositoryAdapter implements PermisoRepositoryPort {
         Sort sort = Sort.by(direction, query.getSortBy());
 
         Pageable pageable = (query.getSize() == -1)
-                ? Pageable.unpaged(sort)
-                : PageRequest.of(query.getPage(), query.getSize(), sort);
+            ? Pageable.unpaged(sort)
+            : PageRequest.of(query.getPage(), query.getSize(), sort);
 
         Specification<PermisoEntity> spec = (root, cq, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -45,26 +45,26 @@ public class PermisoRepositoryAdapter implements PermisoRepositoryPort {
         };
 
         return permissionRepository.findAll(spec, pageable)
-                .map(permisoMapper::toDomain);
+            .map(permisoMapper::toDomain);
     }
 
     @Override
     public Optional<Permiso> findById(Long id) {
         return permissionRepository.findById(id)
-                .map(permisoMapper::toDomain);
+            .map(permisoMapper::toDomain);
     }
 
     @Override
     public List<Permiso> findAllByIdIn(Set<Long> ids) {
         return permissionRepository.findAllById(ids).stream()
-                .map(permisoMapper::toDomain)
-                .toList();
+            .map(permisoMapper::toDomain)
+            .toList();
     }
 
     @Override
     public Optional<Permiso> findByNombre(String nombre) {
         return permissionRepository.findByNombre(nombre)
-                .map(permisoMapper::toDomain);
+            .map(permisoMapper::toDomain);
     }
 
     @Override
