@@ -9,12 +9,16 @@ import com.ahuanay.auth.permiso.infrastructure.entrypoints.rest.dto.PermisoRestR
 import com.ahuanay.auth.permiso.infrastructure.entrypoints.rest.dto.PermisoRestResponse;
 import com.ahuanay.auth.permiso.infrastructure.entrypoints.rest.mapper.PermisoRestMapper;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,13 +38,57 @@ public class PermisoController {
     private final PermisoRestMapper permisoRestMapper;
 
     @GetMapping
-    @Operation(summary = "Listar permisos", description = "Obtiene una lista paginada y filtrada de los permisos del sistema (Solo Admin).")
+    @Operation(
+        summary = "Listar permisos",
+        description = "Obtiene una lista paginada y filtrada de los permisos del sistema. Soporta consulta completa si se envía size = -1 (Rol requerido: Administrador)."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Lista de permisos obtenida exitosamente",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageRestResponse.class))
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "No autenticado",
+            content = @Content
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "No autorizado / Sin permisos suficientes",
+            content = @Content
+        )
+    })
     public ResponseEntity<PageRestResponse<PermisoRestResponse>> getAll(
-            @RequestParam(required = false) String nombre,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "ASC") String direction
+        @Parameter(
+            description = "Filtro opcional para buscar permisos por coincidencia parcial en el nombre",
+            example = "READ"
+        )
+        @RequestParam(required = false) String nombre,
+
+        @Parameter(
+            description = "Número de la página a consultar (inicia en 0)",
+            example = "0"
+        )
+        @RequestParam(defaultValue = "0") int page,
+
+        @Parameter(
+            description = "Cantidad de elementos por página. Si se envía -1, se desactivará la paginación y se retornarán todos los registros disponibles.",
+            example = "10"
+        )
+        @RequestParam(defaultValue = "10") int size,
+
+        @Parameter(
+            description = "Campo por el cual se ordenarán los resultados",
+            example = "id"
+        )
+        @RequestParam(defaultValue = "id") String sortBy,
+
+        @Parameter(
+            description = "Dirección del ordenamiento (ASC para ascendente, DESC para descendente)",
+            example = "ASC"
+        )
+        @RequestParam(defaultValue = "ASC") String direction
     ) {
         PermisoQuery query = PermisoQuery.builder()
                 .nombre(nombre)

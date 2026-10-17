@@ -3,6 +3,7 @@ package com.ahuanay.auth.common.infrastructure.adapters.persistence.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.annotation.CreatedBy;
@@ -21,14 +22,17 @@ public abstract class AuditableEntity {
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
+    @Setter(AccessLevel.NONE)
     private LocalDateTime createdAt;
 
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
+    @Setter(AccessLevel.NONE)
     private LocalDateTime updatedAt;
 
     @CreatedBy
     @Column(name = "created_by", updatable = false)
+    @Setter(AccessLevel.NONE)
     private String createdBy;
 
     @LastModifiedBy
