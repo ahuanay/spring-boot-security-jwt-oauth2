@@ -4,6 +4,7 @@ import com.ahuanay.auth.common.domain.exception.RecursoNoEncontradoException;
 import com.ahuanay.auth.permiso.application.command.PermisoCommand;
 import com.ahuanay.auth.permiso.application.port.out.PermisoRepositoryPort;
 import com.ahuanay.auth.permiso.application.response.PermisoResponse;
+import com.ahuanay.auth.permiso.domain.exception.PermisoDuplicadoException;
 import com.ahuanay.auth.permiso.domain.model.Permiso;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -41,17 +42,17 @@ class PermisoUpdateUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Debería actualizar permiso exitosamente")
-    void deberiaActualizarPermisoExitosamente() {
-        // Given
+    @DisplayName("Debería actualizar permiso exitosamente cuando todos los parámetros son válidos")
+    void deberiaActualizarPermisoExitosamente_CuandoTodosParametrosSonValidos() {
+        // Arrange
         when(permisoRepositoryPort.findById(id)).thenReturn(Optional.of(permisoExistente));
         when(permisoRepositoryPort.findByNombre(command.nombre())).thenReturn(Optional.empty());
         when(permisoRepositoryPort.save(any(Permiso.class))).thenReturn(new Permiso(id, command.nombre()));
 
-        // When
+        // Act
         PermisoResponse resultado = permisoUpdateUseCase.update(id, command);
 
-        // Then
+        // Assert
         assertThat(resultado).isNotNull();
         assertThat(resultado.id()).isEqualTo(id);
         assertThat(resultado.nombre()).isEqualTo("PERMISO_UPDATE");
@@ -63,13 +64,13 @@ class PermisoUpdateUseCaseImplTest {
 
     @Test
     @DisplayName("Debería lanzar RecursoNoEncontradoException cuando el ID no existe")
-    void deberiaLanzarExcepcionCuandoIdNoExiste() {
-        // Given
+    void deberiaLanzarRecursoNoEncontradoException_CuandoElIdNoExiste() {
+        // Arrange
         when(permisoRepositoryPort.findById(id)).thenReturn(Optional.empty());
 
-        // When / Then
+        // Act & Assert
         assertThatThrownBy(() -> permisoUpdateUseCase.update(id, command))
-                .isInstanceOf(RecursoNoEncontradoException.class);
+            .isInstanceOf(RecursoNoEncontradoException.class);
 
         verify(permisoRepositoryPort, times(1)).findById(id);
         verify(permisoRepositoryPort, never()).findByNombre(anyString());
@@ -77,18 +78,18 @@ class PermisoUpdateUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Debería lanzar IllegalArgumentException cuando ya existe otro permiso con el mismo nombre")
-    void deberiaLanzarExcepcionCuandoNombreDuplicado() {
-        // Given
-        Permiso otroPermiso = new Permiso(2L, "PERMISO_UPDATE"); // ID diferente pero mismo nombre
+    @DisplayName("Debería lanzar PermisoDuplicadoException cuando ya existe otro permiso con el mismo nombre")
+    void deberiaLanzarPermisoDuplicadoException_CuandoYaExisteOtroPermisoConMismoNombre() {
+        // Arrange
+        Permiso otroPermiso = new Permiso(2L, "PERMISO_UPDATE");
 
         when(permisoRepositoryPort.findById(id)).thenReturn(Optional.of(permisoExistente));
         when(permisoRepositoryPort.findByNombre(command.nombre())).thenReturn(Optional.of(otroPermiso));
 
-        // When / Then
+        // Act & Assert
         assertThatThrownBy(() -> permisoUpdateUseCase.update(id, command))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Ya existe otro permiso con el nombre: " + command.nombre());
+            .isInstanceOf(PermisoDuplicadoException.class)
+            .hasMessage("El permiso '" + command.nombre() + "' ya existe.");
 
         verify(permisoRepositoryPort, times(1)).findById(id);
         verify(permisoRepositoryPort, times(1)).findByNombre(command.nombre());

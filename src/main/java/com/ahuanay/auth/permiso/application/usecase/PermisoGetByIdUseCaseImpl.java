@@ -19,6 +19,6 @@ public class PermisoGetByIdUseCaseImpl implements PermisoGetByIdUseCase {
     public PermisoResponse getById(Long id) {
         return permisoRepositoryPort.findById(id)
             .map(permiso -> new PermisoResponse(permiso.getId(), permiso.getNombre()))
-            .orElseThrow(() -> new RecursoNoEncontradoException("Permiso", id));
+            .orElseThrow(() -> new RecursoNoEncontradoException("No existe el permiso solicitado", id));
     }
 }

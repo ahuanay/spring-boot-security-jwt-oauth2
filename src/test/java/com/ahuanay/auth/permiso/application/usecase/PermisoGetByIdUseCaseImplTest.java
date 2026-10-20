@@ -2,7 +2,6 @@ package com.ahuanay.auth.permiso.application.usecase;
 
 import com.ahuanay.auth.common.domain.exception.RecursoNoEncontradoException;
 import com.ahuanay.auth.permiso.application.port.out.PermisoRepositoryPort;
-import com.ahuanay.auth.permiso.application.response.PermisoResponse;
 import com.ahuanay.auth.permiso.domain.model.Permiso;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,15 +36,15 @@ class PermisoGetByIdUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Debería obtener por id permiso exitosamente")
-    void deberiaObtenerPorIdPermisoExitosamente() {
-        // Given
+    @DisplayName("Debería obtener por id permiso exitosamente cuando el ID existe")
+    void deberiaObtenerPorIdPermisoExitosamente_CuandoElIdExiste() {
+        // Arrange
         when(permisoRepositoryPort.findById(id)).thenReturn(Optional.of(permisoDomain));
 
-        // When
+        // Act
         var resultado = permisoGetByIdUseCase.getById(id);
 
-        // Then
+        // Assert
         assertThat(resultado).isNotNull();
         assertThat(resultado.id()).isEqualTo(id);
         verify(permisoRepositoryPort, times(1)).findById(id);
@@ -53,14 +52,14 @@ class PermisoGetByIdUseCaseImplTest {
 
     @Test
     @DisplayName("Debería lanzar RecursoNoEncontradoException cuando el ID no existe")
-    void deberiaLanzarExcepcionSiPermisoNoExiste() {
-        // Given
+    void deberiaLanzarRecursoNoEncontradoException_CuandoElIdNoExiste() {
+        // Arrange
         when(permisoRepositoryPort.findById(id)).thenReturn(Optional.empty());
 
-        // When / Then
+        // Act & Assert
         assertThatThrownBy(() -> permisoGetByIdUseCase.getById(id))
-                .isInstanceOf(RecursoNoEncontradoException.class)
-                .hasMessage("Permiso no encontrado con ID: " + id);
+            .isInstanceOf(RecursoNoEncontradoException.class)
+            .hasMessage("No existe el permiso solicitado");
 
         verify(permisoRepositoryPort, times(1)).findById(id);
     }

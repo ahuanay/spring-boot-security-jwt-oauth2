@@ -17,7 +17,7 @@ public class PermisoDeleteUseCaseImpl implements PermisoDeleteUseCase {
     @Transactional
     public void delete(Long id) {
         permisoRepositoryPort.findById(id)
-            .orElseThrow(() -> new RecursoNoEncontradoException("Permiso", id));
+            .orElseThrow(() -> new RecursoNoEncontradoException("No existe el permiso solicitado", id));
 
         permisoRepositoryPort.deleteById(id);
     }

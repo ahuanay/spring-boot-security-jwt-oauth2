@@ -41,15 +41,15 @@ class PermisoCreateUseCaseImplTest {
 
     @Test
     @DisplayName("Debería crear un permiso exitosamente cuando no existe duplicado")
-    void deberiaCrearPermisoExitosamente() {
-        // Given
+    void deberiaCrearPermisoExitosamente_CuandoNoExisteDuplicado() {
+        // Arrange
         when(permisoRepositoryPort.findByNombre(command.nombre())).thenReturn(Optional.empty());
         when(permisoRepositoryPort.save(any(Permiso.class))).thenReturn(permisoDomain);
 
-        // When
+        // Act
         PermisoResponse resultado = permisoCreateUseCase.create(command);
 
-        // Then
+        // Assert
         assertThat(resultado).isNotNull();
         assertThat(resultado.id()).isEqualTo(1L);
         assertThat(resultado.nombre()).isEqualTo("PERMISO_CREATE");
@@ -60,14 +60,14 @@ class PermisoCreateUseCaseImplTest {
 
     @Test
     @DisplayName("Debería lanzar PermisoDuplicadoException cuando el nombre del permiso ya existe")
-    void deberiaLanzarExcepcionCuandoPermisoDuplicado() {
-        // Given
+    void deberiaLanzarPermisoDuplicadoException_CuandoElNombreYaExiste() {
+        // Arrange
         when(permisoRepositoryPort.findByNombre(command.nombre())).thenReturn(Optional.of(permisoDomain));
 
-        // When / Then
+        // Act & Assert
         assertThatThrownBy(() -> permisoCreateUseCase.create(command))
-                .isInstanceOf(PermisoDuplicadoException.class)
-                .hasMessage("El permiso 'PERMISO_CREATE' ya existe.");
+            .isInstanceOf(PermisoDuplicadoException.class)
+            .hasMessage("El permiso 'PERMISO_CREATE' ya existe.");
 
         verify(permisoRepositoryPort, times(1)).findByNombre(command.nombre());
         verify(permisoRepositoryPort, never()).save(any(Permiso.class));
@@ -75,14 +75,14 @@ class PermisoCreateUseCaseImplTest {
 
     @Test
     @DisplayName("Debería lanzar PermisoInvalidoException cuando el nombre del comando es inválido")
-    void deberiaLanzarExcepcionCuandoNombreInvalido() {
-        // Given
+    void deberiaLanzarPermisoInvalidoException_CuandoElNombreEstaVacio() {
+        // Arrange
         PermisoCommand comandoInvalido = new PermisoCommand("");
 
-        // When / Then
+        // Act & Assert
         assertThatThrownBy(() -> permisoCreateUseCase.create(comandoInvalido))
-                .isInstanceOf(PermisoInvalidoException.class)
-                .hasMessage("El nombre del permiso no puede estar vacío.");
+            .isInstanceOf(PermisoInvalidoException.class)
+            .hasMessage("El nombre del permiso no puede estar vacío.");
 
         verify(permisoRepositoryPort, never()).findByNombre(anyString());
         verify(permisoRepositoryPort, never()).save(any(Permiso.class));

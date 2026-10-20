@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -47,20 +48,25 @@ class PermisoRepositoryAdapterTest {
     }
 
     @Test
-    @DisplayName("Debería retornar una página de permisos usando el adaptador")
-    void deberiaRetornarPaginaDePermisos() {
-        // Given
+    @DisplayName("Debería retornar una página de permisos cuando se aplica un filtro válido")
+    void deberiaRetornarPaginaDePermisos_CuandoSeAplicaFiltroValido() {
+        // Arrange
         PermisoQuery query = new PermisoQuery();
         query.setNombre("CREATE");
+        query.setPage(0);
+        query.setSize(10);
+        query.setSortBy("id");
+        query.setDirection("ASC");
+
         Page<PermisoEntity> entityPage = new PageImpl<>(List.of(permisoEntity));
 
         when(permissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(entityPage);
         when(permisoMapper.toDomain(permisoEntity)).thenReturn(permisoDomain);
 
-        // When
+        // Act
         Page<Permiso> resultado = permisoRepositoryAdapter.findAll(query);
 
-        // Then
+        // Assert
         assertThat(resultado).isNotNull();
         assertThat(resultado.getContent()).hasSize(1);
         assertThat(resultado.getContent().getFirst().getId()).isEqualTo(1L);
@@ -71,17 +77,39 @@ class PermisoRepositoryAdapterTest {
     }
 
     @Test
-    @DisplayName("Debería buscar permiso por ID exitosamente")
-    void deberiaBuscarPermisoPorIdExitosamente() {
-        // Given
+    @DisplayName("Debería consultar sin paginación cuando el tamaño de página es -1")
+    void deberiaConsultarSinPaginacion_CuandoElTamanoDePaginaEsMenosUno() {
+        // Arrange
+        PermisoQuery query = new PermisoQuery();
+        query.setSize(-1);
+        Page<PermisoEntity> entityPage = new PageImpl<>(List.of(permisoEntity));
+
+        when(permissionRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(entityPage);
+        when(permisoMapper.toDomain(permisoEntity)).thenReturn(permisoDomain);
+
+        // Act
+        Page<Permiso> resultado = permisoRepositoryAdapter.findAll(query);
+
+        // Assert
+        assertThat(resultado).isNotNull();
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(permissionRepository, times(1)).findAll(any(Specification.class), pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue().isUnpaged()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Debería retornar el permiso cuando se busca por un ID existente")
+    void deberiaRetornarPermiso_CuandoSeBuscaPorIdExistente() {
+        // Arrange
         Long id = 1L;
         when(permissionRepository.findById(id)).thenReturn(Optional.of(permisoEntity));
         when(permisoMapper.toDomain(permisoEntity)).thenReturn(permisoDomain);
 
-        // When
+        // Act
         Optional<Permiso> resultado = permisoRepositoryAdapter.findById(id);
 
-        // Then
+        // Assert
         assertThat(resultado).isPresent();
         assertThat(resultado.get().getId()).isEqualTo(id);
         assertThat(resultado.get().getNombre()).isEqualTo("PERMISO_CREATE");
@@ -91,17 +119,17 @@ class PermisoRepositoryAdapterTest {
     }
 
     @Test
-    @DisplayName("Debería buscar permisos por lista de IDs exitosamente")
-    void deberiaBuscarPermisosPorIdsExitosamente() {
-        // Given
+    @DisplayName("Debería retornar una lista de permisos cuando se buscan por una lista de IDs válidos")
+    void deberiaRetornarListaDePermisos_CuandoSeBuscanPorIdsValidos() {
+        // Arrange
         Set<Long> ids = Set.of(1L);
         when(permissionRepository.findAllById(ids)).thenReturn(List.of(permisoEntity));
         when(permisoMapper.toDomain(permisoEntity)).thenReturn(permisoDomain);
 
-        // When
+        // Act
         List<Permiso> resultado = permisoRepositoryAdapter.findAllByIdIn(ids);
 
-        // Then
+        // Assert
         assertThat(resultado).hasSize(1);
         assertThat(resultado.getFirst().getId()).isEqualTo(1L);
 
@@ -110,17 +138,17 @@ class PermisoRepositoryAdapterTest {
     }
 
     @Test
-    @DisplayName("Debería buscar permiso por nombre exitosamente")
-    void deberiaBuscarPermisoPorNombreExitosamente() {
-        // Given
+    @DisplayName("Debería retornar el permiso cuando se busca por un nombre existente")
+    void deberiaRetornarPermiso_CuandoSeBuscaPorNombreExistente() {
+        // Arrange
         String nombre = "PERMISO_CREATE";
         when(permissionRepository.findByNombre(nombre)).thenReturn(Optional.of(permisoEntity));
         when(permisoMapper.toDomain(permisoEntity)).thenReturn(permisoDomain);
 
-        // When
+        // Act
         Optional<Permiso> resultado = permisoRepositoryAdapter.findByNombre(nombre);
 
-        // Then
+        // Assert
         assertThat(resultado).isPresent();
         assertThat(resultado.get().getNombre()).isEqualTo(nombre);
 
@@ -129,17 +157,17 @@ class PermisoRepositoryAdapterTest {
     }
 
     @Test
-    @DisplayName("Debería guardar un permiso exitosamente")
-    void deberiaGuardarPermisoExitosamente() {
-        // Given
+    @DisplayName("Debería retornar el permiso guardado cuando los datos son válidos")
+    void deberiaRetornarPermisoGuardado_CuandoDatosSonValidos() {
+        // Arrange
         when(permisoMapper.toEntity(permisoDomain)).thenReturn(permisoEntity);
         when(permissionRepository.save(permisoEntity)).thenReturn(permisoEntity);
         when(permisoMapper.toDomain(permisoEntity)).thenReturn(permisoDomain);
 
-        // When
+        // Act
         Permiso resultado = permisoRepositoryAdapter.save(permisoDomain);
 
-        // Then
+        // Assert
         assertThat(resultado).isNotNull();
         assertThat(resultado.getId()).isEqualTo(1L);
         assertThat(resultado.getNombre()).isEqualTo("PERMISO_CREATE");
@@ -150,16 +178,16 @@ class PermisoRepositoryAdapterTest {
     }
 
     @Test
-    @DisplayName("Debería eliminar un permiso por ID exitosamente")
-    void deberiaEliminarPermisoPorIdExitosamente() {
-        // Given
+    @DisplayName("Debería eliminar el permiso exitosamente cuando se proporciona un ID válido")
+    void deberiaEliminarPermiso_CuandoSeProporcionaIdValido() {
+        // Arrange
         Long id = 1L;
         doNothing().when(permissionRepository).deleteById(id);
 
-        // When
+        // Act
         permisoRepositoryAdapter.deleteById(id);
 
-        // Then
+        // Assert
         verify(permissionRepository, times(1)).deleteById(id);
     }
 }

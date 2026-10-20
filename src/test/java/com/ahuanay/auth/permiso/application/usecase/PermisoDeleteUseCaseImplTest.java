@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,29 +36,29 @@ class PermisoDeleteUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Debería eliminar permiso exitosamente")
-    void deberiaEliminarPermisoExitosamente() {
-        // Given
+    @DisplayName("Debería eliminar permiso exitosamente cuando el permiso existe")
+    void deberiaEliminarPermisoExitosamente_CuandoElPermisoExiste() {
+        // Arrange
         when(permisoRepositoryPort.findById(id)).thenReturn(Optional.of(permisoDomain));
 
-        // When
+        // Act
         permisoDeleteUseCase.delete(id);
 
-        // Then
+        // Assert
         verify(permisoRepositoryPort, times(1)).findById(id);
-        verify(permisoRepositoryPort, times(1)).deleteById(permisoDomain.getId());
+        verify(permisoRepositoryPort, times(1)).deleteById(id);
     }
 
     @Test
     @DisplayName("Debería lanzar RecursoNoEncontradoException cuando el ID no existe")
-    void deberiaLanzarExcepcionSiPermisoNoExiste() {
-        // Given
+    void deberiaLanzarRecursoNoEncontradoException_CuandoElIdNoExiste() {
+        // Arrange
         when(permisoRepositoryPort.findById(id)).thenReturn(Optional.empty());
 
-        // When / Then
+        // Act & Assert
         assertThatThrownBy(() -> permisoDeleteUseCase.delete(id))
-                .isInstanceOf(RecursoNoEncontradoException.class)
-                .hasMessage("Permiso no encontrado con ID: " + id);
+            .isInstanceOf(RecursoNoEncontradoException.class)
+            .hasMessage("No existe el permiso solicitado");
 
         verify(permisoRepositoryPort, times(1)).findById(id);
         verify(permisoRepositoryPort, never()).deleteById(anyLong());
