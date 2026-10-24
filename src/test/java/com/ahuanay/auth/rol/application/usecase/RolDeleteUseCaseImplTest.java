@@ -1,9 +1,9 @@
 package com.ahuanay.auth.rol.application.usecase;
 
 import com.ahuanay.auth.common.domain.exception.RecursoNoEncontradoException;
+import com.ahuanay.auth.permiso.domain.model.Permiso;
 import com.ahuanay.auth.rol.application.port.out.RolRepositoryPort;
 import com.ahuanay.auth.rol.domain.model.Rol;
-import com.ahuanay.auth.permiso.domain.model.Permiso;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,7 +38,7 @@ class RolDeleteUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Debería eliminar rol exitosamente cuando el rol existe")
+    @DisplayName("Debería eliminar el rol exitosamente cuando el rol existe")
     void deberiaEliminarRolExitosamente_CuandoElRolExiste() {
         // Arrange
         when(rolRepositoryPort.findById(id)).thenReturn(Optional.of(rolDomain));

@@ -53,8 +53,8 @@ class RolCreateUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Debería crear un rol exitosamente cuando los datos son válidos")
-    void deberiaCrearRolExitosamente_CuandoDatosSonValidos() {
+    @DisplayName("Debería crear el rol exitosamente cuando los datos son válidos")
+    void deberiaCrearRolExitosamente_CuandoLosDatosSonValidos() {
         // Arrange
         when(rolRepositoryPort.findByNombre(command.nombre())).thenReturn(Optional.empty());
         when(permisoRepositoryPort.findAllByIdIn(command.permisoIds())).thenReturn(List.of(permiso1, permiso2));
@@ -77,7 +77,7 @@ class RolCreateUseCaseImplTest {
 
     @Test
     @DisplayName("Debería lanzar RolDuplicadoException cuando el nombre del rol ya existe")
-    void deberiaLanzarRolDuplicadoException_CuandoNombreRolYaExiste() {
+    void deberiaLanzarRolDuplicadoException_CuandoElNombreDelRolYaExiste() {
         // Arrange
         when(rolRepositoryPort.findByNombre(command.nombre())).thenReturn(Optional.of(rolDomain));
 
@@ -93,7 +93,7 @@ class RolCreateUseCaseImplTest {
 
     @Test
     @DisplayName("Debería lanzar RecursoNoEncontradoException cuando uno o más permisos no existen")
-    void deberiaLanzarRecursoNoEncontradoException_CuandoPermisosNoExisten() {
+    void deberiaLanzarRecursoNoEncontradoException_CuandoUnoOMasPermisosNoExisten() {
         // Arrange
         when(rolRepositoryPort.findByNombre(command.nombre())).thenReturn(Optional.empty());
         // Simulamos que solo encuentra un permiso de los dos solicitados
@@ -110,8 +110,8 @@ class RolCreateUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Debería lanzar RolInvalidoException cuando el nombre está vacío")
-    void deberiaLanzarRolInvalidoException_CuandoNombreEstaVacio() {
+    @DisplayName("Debería lanzar RolInvalidoException cuando el nombre del rol está vacío")
+    void deberiaLanzarRolInvalidoException_CuandoElNombreEstaVacio() {
         // Arrange
         RolCommand comandoInvalido = new RolCommand("", Set.of(1L));
 
@@ -125,8 +125,8 @@ class RolCreateUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Debería lanzar RolInvalidoException cuando no hay permisos")
-    void deberiaLanzarRolInvalidoException_CuandoNoHayPermisos() {
+    @DisplayName("Debería lanzar RolInvalidoException cuando el rol no tiene permisos asignados")
+    void deberiaLanzarRolInvalidoException_CuandoNoHayPermisosAsignados() {
         // Arrange
         RolCommand comandoSinPermisos = new RolCommand("ROL_SIN_PERMISOS", Collections.emptySet());
 

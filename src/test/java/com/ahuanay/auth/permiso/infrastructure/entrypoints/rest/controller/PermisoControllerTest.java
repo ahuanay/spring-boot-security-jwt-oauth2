@@ -1,14 +1,15 @@
 package com.ahuanay.auth.permiso.infrastructure.entrypoints.rest.controller;
 
 import com.ahuanay.auth.common.application.response.PageResponse;
+import com.ahuanay.auth.common.infrastructure.entrypoints.rest.exception.GlobalExceptionHandler;
 import com.ahuanay.auth.permiso.application.command.PermisoCommand;
 import com.ahuanay.auth.permiso.application.port.in.*;
 import com.ahuanay.auth.permiso.application.query.PermisoQuery;
 import com.ahuanay.auth.permiso.application.response.PermisoResponse;
 import com.ahuanay.auth.permiso.domain.exception.PermisoDuplicadoException;
+import com.ahuanay.auth.permiso.domain.exception.PermisoEnUsoException;
 import com.ahuanay.auth.permiso.infrastructure.entrypoints.rest.dto.PermisoRestRequest;
 import com.ahuanay.auth.permiso.infrastructure.entrypoints.rest.dto.PermisoRestResponse;
-import com.ahuanay.auth.permiso.infrastructure.entrypoints.rest.exception.PermisoExceptionHandler;
 import com.ahuanay.auth.permiso.infrastructure.entrypoints.rest.mapper.PermisoRestMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +25,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static com.ahuanay.auth.support.MockMvcTestUtils.postJson;
+import static com.ahuanay.auth.support.MockMvcTestUtils.putJson;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -33,7 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(PermisoController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(PermisoExceptionHandler.class)
+@Import(GlobalExceptionHandler.class)
 class PermisoControllerTest {
 
     @Autowired
@@ -79,7 +82,7 @@ class PermisoControllerTest {
     // ==========================================
 
     @Test
-    @DisplayName("GET /api/v1/permisos - Debería listar permisos exitosamente cuando se solicitan con parámetros válidos")
+    @DisplayName("GET /api/v1/permisos - Debería listar los permisos exitosamente cuando se solicitan con parámetros válidos")
     void deberiaListarPermisosExitosamente_CuandoSeSolicitanConParametrosValidos() throws Exception {
         // Arrange
         PageResponse<PermisoResponse> pageUseCase = new PageResponse<>(
@@ -108,7 +111,7 @@ class PermisoControllerTest {
     // ==========================================
 
     @Test
-    @DisplayName("GET /api/v1/permisos/{id} - Debería obtener permiso por ID exitosamente cuando el ID existe")
+    @DisplayName("GET /api/v1/permisos/{id} - Debería obtener el permiso por ID exitosamente cuando el ID existe")
     void deberiaObtenerPermisoPorIdExitosamente_CuandoElIdExiste() throws Exception {
         // Arrange
         Long id = 1L;
@@ -139,9 +142,7 @@ class PermisoControllerTest {
         when(permisoRestMapper.toRestResponse(useCaseResponse)).thenReturn(restResponse);
 
         // Act & Assert
-        mockMvc.perform(post("/api/v1/permisos")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        postJson(mockMvc, objectMapper, "/api/v1/permisos", request)
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.id").value(1))
             .andExpect(jsonPath("$.nombre").value("PERMISO_CREATE"));
@@ -156,9 +157,7 @@ class PermisoControllerTest {
         PermisoRestRequest requestInvalido = new PermisoRestRequest("");
 
         // Act & Assert
-        mockMvc.perform(post("/api/v1/permisos")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(requestInvalido)))
+        postJson(mockMvc, objectMapper, "/api/v1/permisos", requestInvalido)
             .andExpect(status().isBadRequest());
 
         verify(permisoCreateUseCase, never()).create(any());
@@ -174,9 +173,7 @@ class PermisoControllerTest {
             .thenThrow(new PermisoDuplicadoException("El permiso 'PERMISO_CREATE' ya existe."));
 
         // Act & Assert
-        mockMvc.perform(post("/api/v1/permisos")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        postJson(mockMvc, objectMapper, "/api/v1/permisos", request)
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.status").value(409));
 
@@ -198,9 +195,7 @@ class PermisoControllerTest {
         when(permisoRestMapper.toRestResponse(useCaseResponse)).thenReturn(restResponse);
 
         // Act & Assert
-        mockMvc.perform(put("/api/v1/permisos/{id}", id)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        putJson(mockMvc, objectMapper, "/api/v1/permisos/" + id, request)
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(1))
             .andExpect(jsonPath("$.nombre").value("PERMISO_CREATE"));
@@ -222,6 +217,24 @@ class PermisoControllerTest {
         // Act & Assert
         mockMvc.perform(delete("/api/v1/permisos/{id}", id))
             .andExpect(status().isNoContent());
+
+        verify(permisoDeleteUseCase, times(1)).delete(id);
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/permisos/{id} - Debería retornar 409 Conflict cuando el permiso está asignado a roles")
+    void deberiaRetornarConflict_CuandoElPermisoEstaAsignadoARoles() throws Exception {
+        // Arrange
+        Long id = 1L;
+        doThrow(new PermisoEnUsoException("El permiso no puede eliminarse porque está asignado a los roles con ID: 1, 2"))
+            .when(permisoDeleteUseCase).delete(id);
+
+        // Act & Assert
+        mockMvc.perform(delete("/api/v1/permisos/{id}", id))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.status").value(409))
+            .andExpect(jsonPath("$.message")
+                .value("El permiso no puede eliminarse porque está asignado a los roles con ID: 1, 2"));
 
         verify(permisoDeleteUseCase, times(1)).delete(id);
     }

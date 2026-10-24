@@ -23,6 +23,6 @@ public record PageRestResponse<T>(
     int totalPages,
 
     @Schema(description = "Indica si esta es la última página del resultado", example = "false")
-    boolean last
+    boolean isLast
 ) {
 }

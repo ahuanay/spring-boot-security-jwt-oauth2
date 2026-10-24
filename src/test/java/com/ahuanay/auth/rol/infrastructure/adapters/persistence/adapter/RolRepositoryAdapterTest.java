@@ -1,5 +1,6 @@
 package com.ahuanay.auth.rol.infrastructure.adapters.persistence.adapter;
 
+import com.ahuanay.auth.common.domain.exception.ParametroInvalidoException;
 import com.ahuanay.auth.permiso.domain.model.Permiso;
 import com.ahuanay.auth.permiso.infrastructure.adapters.persistence.entity.PermisoEntity;
 import com.ahuanay.auth.rol.application.query.RolQuery;
@@ -7,6 +8,7 @@ import com.ahuanay.auth.rol.domain.model.Rol;
 import com.ahuanay.auth.rol.infrastructure.adapters.persistence.entity.RolEntity;
 import com.ahuanay.auth.rol.infrastructure.adapters.persistence.mapper.RolMapper;
 import com.ahuanay.auth.rol.infrastructure.adapters.persistence.repository.SpringDataRolRepository;
+import jakarta.persistence.criteria.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,6 +27,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -101,6 +104,94 @@ class RolRepositoryAdapterTest {
     }
 
     @Test
+    @DisplayName("Debería lanzar ParametroInvalidoException cuando el sortBy no es un campo permitido")
+    void deberiaLanzarParametroInvalidoException_CuandoElSortByNoEsPermitido() {
+        // Arrange
+        RolQuery query = new RolQuery();
+        query.setSortBy("password");
+
+        // Act & Assert
+        assertThatThrownBy(() -> rolRepositoryAdapter.findAll(query))
+            .isInstanceOf(ParametroInvalidoException.class)
+            .hasMessage("El parámetro 'sortBy' con valor 'password' no es válido. Valores permitidos: id, nombre.");
+
+        verify(rolRepository, never()).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("Debería lanzar ParametroInvalidoException cuando la dirección de ordenamiento no es válida")
+    void deberiaLanzarParametroInvalidoException_CuandoLaDireccionNoEsValida() {
+        // Arrange
+        RolQuery query = new RolQuery();
+        query.setSortBy("nombre");
+        query.setDirection("DESCONOCIDA");
+
+        // Act & Assert
+        assertThatThrownBy(() -> rolRepositoryAdapter.findAll(query))
+            .isInstanceOf(ParametroInvalidoException.class)
+            .hasMessage("El parámetro 'direction' con valor 'DESCONOCIDA' no es válido. Valores permitidos: ASC, DESC.");
+
+        verify(rolRepository, never()).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("Debería aceptar sortBy y direction en cualquier capitalización")
+    void deberiaAceptarSortByYDirection_EnCualquierCapitalizacion() {
+        // Arrange
+        RolQuery query = new RolQuery();
+        query.setSortBy("NOMBRE");
+        query.setDirection("desc");
+        Page<RolEntity> entityPage = new PageImpl<>(List.of(rolEntity));
+
+        when(rolRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(entityPage);
+        when(rolMapper.toDomain(rolEntity)).thenReturn(rolDomain);
+
+        // Act
+        Page<Rol> resultado = rolRepositoryAdapter.findAll(query);
+
+        // Assert
+        assertThat(resultado).isNotNull();
+        verify(rolRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("Debería retornar los roles que coinciden con el lote de IDs cuando se busca por lote de IDs")
+    void deberiaRetornarRoles_CuandoSeBuscaPorLoteDeIds() {
+        // Arrange
+        Set<Long> ids = Set.of(1L, 2L);
+        when(rolRepository.findAllById(ids)).thenReturn(List.of(rolEntity));
+        when(rolMapper.toDomain(rolEntity)).thenReturn(rolDomain);
+
+        // Act
+        List<Rol> resultado = rolRepositoryAdapter.findAllByIdIn(ids);
+
+        // Assert
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.getFirst().getId()).isEqualTo(1L);
+        assertThat(resultado.getFirst().getNombre()).isEqualTo("DOCTOR");
+
+        verify(rolRepository, times(1)).findAllById(ids);
+        verify(rolMapper, times(1)).toDomain(rolEntity);
+    }
+
+    @Test
+    @DisplayName("Debería retornar una lista vacía cuando ningún rol coincide con el lote de IDs")
+    void deberiaRetornarListaVacia_CuandoNingunRolCoincideConElLoteDeIds() {
+        // Arrange
+        Set<Long> ids = Set.of(99L);
+        when(rolRepository.findAllById(ids)).thenReturn(List.of());
+
+        // Act
+        List<Rol> resultado = rolRepositoryAdapter.findAllByIdIn(ids);
+
+        // Assert
+        assertThat(resultado).isEmpty();
+
+        verify(rolRepository, times(1)).findAllById(ids);
+        verifyNoInteractions(rolMapper);
+    }
+
+    @Test
     @DisplayName("Debería retornar el rol cuando se busca por un ID existente")
     void deberiaRetornarRol_CuandoSeBuscaPorIdExistente() {
         // Arrange
@@ -172,5 +263,79 @@ class RolRepositoryAdapterTest {
 
         // Assert
         verify(rolRepository, times(1)).deleteById(id);
+    }
+
+    @Test
+    @DisplayName("Debería construir el predicate de filtro por nombre cuando se consulta con filtro")
+    @SuppressWarnings("unchecked")
+    void deberiaConstruirPredicateDeFiltroPorNombre_CuandoSeConsultaConFiltro() {
+        // Arrange
+        RolQuery query = new RolQuery();
+        query.setNombre("ad%min_");
+        query.setSortBy("id");
+        query.setDirection("ASC");
+
+        Page<RolEntity> entityPage = new PageImpl<>(List.of(rolEntity));
+        when(rolRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(entityPage);
+        when(rolMapper.toDomain(rolEntity)).thenReturn(rolDomain);
+
+        // Act
+        rolRepositoryAdapter.findAll(query);
+
+        // Assert
+        ArgumentCaptor<Specification<RolEntity>> specificationCaptor = ArgumentCaptor.forClass(Specification.class);
+        verify(rolRepository).findAll(specificationCaptor.capture(), any(Pageable.class));
+
+        Root<RolEntity> root = mock(Root.class);
+        CriteriaQuery<?> criteriaQuery = mock(CriteriaQuery.class);
+        CriteriaBuilder criteriaBuilder = mock(CriteriaBuilder.class);
+        Expression<String> expression = mock(Expression.class);
+        Path<String> path = mock(Path.class);
+        Predicate likePredicate = mock(Predicate.class);
+        Predicate predicateResultado = mock(Predicate.class);
+
+        doReturn(path).when(root).get("nombre");
+        when(criteriaBuilder.lower(path)).thenReturn(expression);
+        when(criteriaBuilder.like(expression, "%ad\\%min\\_%", '\\')).thenReturn(likePredicate);
+        when(criteriaBuilder.and(any(Predicate[].class))).thenReturn(predicateResultado);
+
+        Predicate predicate = specificationCaptor.getValue().toPredicate(root, criteriaQuery, criteriaBuilder);
+
+        assertThat(predicate).isEqualTo(predicateResultado);
+        verify(criteriaBuilder).like(expression, "%ad\\%min\\_%", '\\');
+        verifyNoMoreInteractions(expression);
+    }
+
+    @Test
+    @DisplayName("Debería construir el predicate vacío cuando el filtro de nombre no está presente")
+    @SuppressWarnings("unchecked")
+    void deberiaConstruirPredicateVacio_CuandoElFiltroDeNombreNoEstaPresente() {
+        // Arrange
+        RolQuery query = new RolQuery();
+        query.setSortBy("id");
+        query.setDirection("ASC");
+
+        Page<RolEntity> entityPage = new PageImpl<>(List.of(rolEntity));
+        when(rolRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(entityPage);
+        when(rolMapper.toDomain(rolEntity)).thenReturn(rolDomain);
+
+        // Act
+        rolRepositoryAdapter.findAll(query);
+
+        // Assert
+        ArgumentCaptor<Specification<RolEntity>> specificationCaptor = ArgumentCaptor.forClass(Specification.class);
+        verify(rolRepository).findAll(specificationCaptor.capture(), any(Pageable.class));
+
+        Root<RolEntity> root = mock(Root.class);
+        CriteriaQuery<?> criteriaQuery = mock(CriteriaQuery.class);
+        CriteriaBuilder criteriaBuilder = mock(CriteriaBuilder.class);
+        Predicate predicateResultado = mock(Predicate.class);
+
+        when(criteriaBuilder.and(any(Predicate[].class))).thenReturn(predicateResultado);
+
+        Predicate predicate = specificationCaptor.getValue().toPredicate(root, criteriaQuery, criteriaBuilder);
+
+        assertThat(predicate).isEqualTo(predicateResultado);
+        verifyNoInteractions(root);
     }
 }

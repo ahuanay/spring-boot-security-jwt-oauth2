@@ -55,7 +55,7 @@ class RolGetAllUseCaseImplTest {
         assertThat(resultado.pageSize()).isEqualTo(10);
         assertThat(resultado.totalElements()).isEqualTo(1);
         assertThat(resultado.totalPages()).isEqualTo(1);
-        assertThat(resultado.last()).isTrue();
+        assertThat(resultado.isLast()).isTrue();
 
         verify(rolRepositoryPort, times(1)).findAll(any(RolQuery.class));
     }

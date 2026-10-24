@@ -36,8 +36,8 @@ class PermisoGetByIdUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Debería obtener por id permiso exitosamente cuando el ID existe")
-    void deberiaObtenerPorIdPermisoExitosamente_CuandoElIdExiste() {
+    @DisplayName("Debería obtener el permiso exitosamente cuando el ID existe")
+    void deberiaObtenerPermisoExitosamente_CuandoElIdExiste() {
         // Arrange
         when(permisoRepositoryPort.findById(id)).thenReturn(Optional.of(permisoDomain));
 

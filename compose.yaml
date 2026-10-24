@@ -1,28 +1,37 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: postgres_auth_db
+    container_name: postgres_server
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: auth_db
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d auth_db"]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}" ]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - red-auth
 
+  maildev:
+    image: maildev/maildev
+    container_name: maildev_server
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+    networks:
+      - red-auth
+
   auth-service:
-    image: auth-service:dev
     build:
       context: .
       dockerfile: Dockerfile
+    image: auth-service:dev
     container_name: auth_service_app
     ports:
       - "8081:8081"
@@ -31,6 +40,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      maildev:
+        condition: service_started
     networks:
       - red-auth
 

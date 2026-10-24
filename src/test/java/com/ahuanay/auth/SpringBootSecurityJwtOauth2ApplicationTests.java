@@ -1,11 +1,11 @@
 package com.ahuanay.auth;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
-@Disabled
+@ActiveProfiles("test")
 class SpringBootSecurityJwtOauth2ApplicationTests {
 
     @Test

@@ -46,6 +46,11 @@ INSERT INTO rol_permisos (rol_id, permiso_id) VALUES (1, 1);
 INSERT INTO rol_permisos (rol_id, permiso_id) VALUES (1, 2);
 INSERT INTO rol_permisos (rol_id, permiso_id) VALUES (1, 3);
 INSERT INTO rol_permisos (rol_id, permiso_id) VALUES (1, 4);
+-- Asignación de permisos ROL_* al Rol ADMIN (ids: 5–8)
+INSERT INTO rol_permisos (rol_id, permiso_id) VALUES (1, 5);
+INSERT INTO rol_permisos (rol_id, permiso_id) VALUES (1, 6);
+INSERT INTO rol_permisos (rol_id, permiso_id) VALUES (1, 7);
+INSERT INTO rol_permisos (rol_id, permiso_id) VALUES (1, 8);
 
 -- Asignación de Permisos al Rol DOCTOR (id: 2)
 INSERT INTO rol_permisos (rol_id, permiso_id) VALUES (2, 1);

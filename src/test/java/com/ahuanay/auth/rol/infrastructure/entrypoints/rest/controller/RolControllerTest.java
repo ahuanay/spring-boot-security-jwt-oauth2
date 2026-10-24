@@ -1,16 +1,16 @@
 package com.ahuanay.auth.rol.infrastructure.entrypoints.rest.controller;
 
 import com.ahuanay.auth.common.application.response.PageResponse;
+import com.ahuanay.auth.common.infrastructure.entrypoints.rest.exception.GlobalExceptionHandler;
+import com.ahuanay.auth.permiso.application.response.PermisoResponse;
+import com.ahuanay.auth.permiso.infrastructure.entrypoints.rest.dto.PermisoRestResponse;
 import com.ahuanay.auth.rol.application.command.RolCommand;
 import com.ahuanay.auth.rol.application.port.in.*;
 import com.ahuanay.auth.rol.application.query.RolQuery;
 import com.ahuanay.auth.rol.application.response.RolResponse;
 import com.ahuanay.auth.rol.domain.exception.RolDuplicadoException;
-import com.ahuanay.auth.permiso.application.response.PermisoResponse;
-import com.ahuanay.auth.permiso.infrastructure.entrypoints.rest.dto.PermisoRestResponse;
 import com.ahuanay.auth.rol.infrastructure.entrypoints.rest.dto.RolRestRequest;
 import com.ahuanay.auth.rol.infrastructure.entrypoints.rest.dto.RolRestResponse;
-import com.ahuanay.auth.rol.infrastructure.entrypoints.rest.exception.RolExceptionHandler;
 import com.ahuanay.auth.rol.infrastructure.entrypoints.rest.mapper.RolRestMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +27,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Set;
 
+import static com.ahuanay.auth.support.MockMvcTestUtils.postJson;
+import static com.ahuanay.auth.support.MockMvcTestUtils.putJson;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -36,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(RolController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(RolExceptionHandler.class)
+@Import(GlobalExceptionHandler.class)
 class RolControllerTest {
 
     @Autowired
@@ -85,7 +87,7 @@ class RolControllerTest {
     // ==========================================
 
     @Test
-    @DisplayName("GET /api/v1/roles - Debería listar roles exitosamente cuando se solicitan con parámetros válidos")
+    @DisplayName("GET /api/v1/roles - Debería listar los roles exitosamente cuando se solicitan con parámetros válidos")
     void deberiaListarRolesExitosamente_CuandoSeSolicitanConParametrosValidos() throws Exception {
         // Arrange
         PageResponse<RolResponse> pageUseCase = new PageResponse<>(
@@ -115,7 +117,7 @@ class RolControllerTest {
     // ==========================================
 
     @Test
-    @DisplayName("GET /api/v1/roles/{id} - Debería obtener rol por ID exitosamente cuando el ID existe")
+    @DisplayName("GET /api/v1/roles/{id} - Debería obtener el rol por ID exitosamente cuando el ID existe")
     void deberiaObtenerRolPorIdExitosamente_CuandoElIdExiste() throws Exception {
         // Arrange
         Long id = 1L;
@@ -147,9 +149,7 @@ class RolControllerTest {
         when(rolRestMapper.toRestResponse(useCaseResponse)).thenReturn(restResponse);
 
         // Act & Assert
-        mockMvc.perform(post("/api/v1/roles")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        postJson(mockMvc, objectMapper, "/api/v1/roles", request)
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.id").value(1))
             .andExpect(jsonPath("$.nombre").value("ROL_ADMIN"));
@@ -164,9 +164,7 @@ class RolControllerTest {
         RolRestRequest requestInvalido = new RolRestRequest("", null);
 
         // Act & Assert
-        mockMvc.perform(post("/api/v1/roles")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(requestInvalido)))
+        postJson(mockMvc, objectMapper, "/api/v1/roles", requestInvalido)
             .andExpect(status().isBadRequest());
 
         verify(rolCreateUseCase, never()).create(any());
@@ -182,9 +180,7 @@ class RolControllerTest {
             .thenThrow(new RolDuplicadoException("El rol 'ROL_ADMIN' ya existe."));
 
         // Act & Assert
-        mockMvc.perform(post("/api/v1/roles")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        postJson(mockMvc, objectMapper, "/api/v1/roles", request)
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.status").value(409));
 
@@ -206,9 +202,7 @@ class RolControllerTest {
         when(rolRestMapper.toRestResponse(useCaseResponse)).thenReturn(restResponse);
 
         // Act & Assert
-        mockMvc.perform(put("/api/v1/roles/{id}", id)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+        putJson(mockMvc, objectMapper, "/api/v1/roles/" + id, request)
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(1))
             .andExpect(jsonPath("$.nombre").value("ROL_ADMIN"));

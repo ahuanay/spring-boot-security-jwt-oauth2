@@ -1,5 +1,6 @@
 package com.ahuanay.auth.common.infrastructure.entrypoints.rest.exception;
 
+import com.ahuanay.auth.common.domain.exception.ParametroInvalidoException;
 import com.ahuanay.auth.common.domain.exception.RecursoNoEncontradoException;
 import com.ahuanay.auth.common.infrastructure.entrypoints.rest.dto.ErrorResponse;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -12,10 +13,13 @@ import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.List;
 import java.util.Set;
@@ -44,6 +48,19 @@ class GlobalExceptionHandlerTest {
     private static void endpointDePrueba() {
     }
 
+    private ErrorResponse errorDe(ResponseEntity<ErrorResponse> respuesta, HttpStatus estadoEsperado,
+                                  String nombreErrorEsperado) {
+        assertThat(respuesta).isNotNull();
+        assertThat(respuesta.getStatusCode()).isEqualTo(estadoEsperado);
+
+        ErrorResponse error = respuesta.getBody();
+        assertThat(error).isNotNull();
+        assertThat(error.status()).isEqualTo(estadoEsperado.value());
+        assertThat(error.error()).isEqualTo(nombreErrorEsperado);
+        assertThat(error.timestamp()).isNotNull();
+        return error;
+    }
+
     @Test
     @DisplayName("Debería retornar 400 con los errores por campo cuando el payload presenta errores de validación")
     void deberiaRetornar400ConErroresPorCampo_CuandoElPayloadPresentaErroresDeValidacion() throws NoSuchMethodException {
@@ -58,15 +75,8 @@ class GlobalExceptionHandlerTest {
             globalExceptionHandler.handleMethodArgumentNotValid(excepcion);
 
         // Assert
-        assertThat(respuesta).isNotNull();
-        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-
-        ErrorResponse error = respuesta.getBody();
-        assertThat(error).isNotNull();
-        assertThat(error.status()).isEqualTo(400);
-        assertThat(error.error()).isEqualTo("Bad Request");
+        ErrorResponse error = errorDe(respuesta, HttpStatus.BAD_REQUEST, "Bad Request");
         assertThat(error.message()).isEqualTo("Uno o más campos presentan errores de validación.");
-        assertThat(error.timestamp()).isNotNull();
         assertThat(error.errors()).isNotNull().hasSize(2);
         assertThat(error.errors().get("nombre")).isEqualTo("El nombre del permiso es obligatorio");
         assertThat(error.errors().get("email")).isEqualTo("El email es obligatorio");
@@ -104,14 +114,8 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ErrorResponse> respuesta = globalExceptionHandler.handleHttpMessageNotReadable(excepcion);
 
         // Assert
-        assertThat(respuesta).isNotNull();
-        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        ErrorResponse error = respuesta.getBody();
-        assertThat(error).isNotNull();
-        assertThat(error.status()).isEqualTo(400);
-        assertThat(error.error()).isEqualTo("Bad Request");
+        ErrorResponse error = errorDe(respuesta, HttpStatus.BAD_REQUEST, "Bad Request");
         assertThat(error.message()).isEqualTo("El formato del cuerpo de la solicitud (JSON) es inválido.");
-        assertThat(error.timestamp()).isNotNull();
     }
 
     @Test
@@ -134,14 +138,9 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ErrorResponse> respuesta = globalExceptionHandler.handleHttpMessageNotReadable(excepcion);
 
         // Assert
-        assertThat(respuesta).isNotNull();
-        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        ErrorResponse error = respuesta.getBody();
-        assertThat(error).isNotNull();
-        assertThat(error.status()).isEqualTo(400);
-        assertThat(error.error()).isEqualTo("Bad Request");
-        assertThat(error.message()).isEqualTo("El campo 'permisoIds' contiene un tipo de dato inválido. Se esperaba un valor de tipo Long.");
-        assertThat(error.timestamp()).isNotNull();
+        ErrorResponse error = errorDe(respuesta, HttpStatus.BAD_REQUEST, "Bad Request");
+        assertThat(error.message()).isEqualTo(
+            "El campo 'permisoIds' contiene un tipo de dato inválido. Se esperaba un valor de tipo Long.");
     }
 
     @Test
@@ -154,13 +153,8 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ErrorResponse> respuesta = globalExceptionHandler.handleGeneralException(excepcion);
 
         // Assert
-        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        ErrorResponse error = respuesta.getBody();
-        assertThat(error).isNotNull();
-        assertThat(error.status()).isEqualTo(500);
-        assertThat(error.error()).isEqualTo("Internal Server Error");
+        ErrorResponse error = errorDe(respuesta, HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error");
         assertThat(error.message()).isEqualTo("Ocurrió un error inesperado en el servidor.");
-        assertThat(error.timestamp()).isNotNull();
         assertThat(error.errors()).isNull();
         assertThat(error.notFoundIds()).isNull();
     }
@@ -191,13 +185,8 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ErrorResponse> respuesta = globalExceptionHandler.handleRecursoNoEncontrado(excepcion);
 
         // Assert
-        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        ErrorResponse error = respuesta.getBody();
-        assertThat(error).isNotNull();
-        assertThat(error.status()).isEqualTo(404);
-        assertThat(error.error()).isEqualTo("Not Found");
+        ErrorResponse error = errorDe(respuesta, HttpStatus.NOT_FOUND, "Not Found");
         assertThat(error.message()).isEqualTo("No se encontraron los permisos especificados");
-        assertThat(error.timestamp()).isNotNull();
         assertThat(error.notFoundIds()).isEqualTo(Set.of(1L, 2L));
         assertThat(error.errors()).isNull();
     }
@@ -213,9 +202,8 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ErrorResponse> respuesta = globalExceptionHandler.handleRecursoNoEncontrado(excepcion);
 
         // Assert
-        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(respuesta.getBody()).isNotNull();
-        assertThat(respuesta.getBody().notFoundIds()).isEqualTo(Set.of(7L));
+        ErrorResponse error = errorDe(respuesta, HttpStatus.NOT_FOUND, "Not Found");
+        assertThat(error.notFoundIds()).isEqualTo(Set.of(7L));
     }
 
     @Test
@@ -229,11 +217,98 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ErrorResponse> respuesta = globalExceptionHandler.handleRecursoNoEncontrado(excepcion);
 
         // Assert
-        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        ErrorResponse error = respuesta.getBody();
-        assertThat(error).isNotNull();
+        ErrorResponse error = errorDe(respuesta, HttpStatus.NOT_FOUND, "Not Found");
         assertThat(error.message()).isEqualTo("El recurso solicitado no existe");
         assertThat(error.notFoundIds()).isNull();
         assertThat(error.errors()).isNull();
+    }
+
+    @Test
+    @DisplayName("Debería retornar 400 con tipo esperado cuando un parámetro de ruta tiene un tipo de dato inválido")
+    void deberiaRetornar400ConTipoEsperado_CuandoUnParametroTieneTipoDeDatoInvalido() throws NoSuchMethodException {
+        // Arrange
+        MethodParameter methodParameter = new MethodParameter(
+            GlobalExceptionHandlerTest.class.getDeclaredMethod("endpointDePrueba"), -1);
+        MethodArgumentTypeMismatchException excepcion = new MethodArgumentTypeMismatchException(
+            "abc", Long.class, "id", methodParameter, null);
+
+        // Act
+        ResponseEntity<ErrorResponse> respuesta = globalExceptionHandler.handleMethodArgumentTypeMismatch(excepcion);
+
+        // Assert
+        ErrorResponse error = errorDe(respuesta, HttpStatus.BAD_REQUEST, "Bad Request");
+        assertThat(error.message())
+            .isEqualTo("El parámetro 'id' contiene un tipo de dato inválido. Se esperaba un valor de tipo Long.");
+        assertThat(error.errors()).isNull();
+        assertThat(error.notFoundIds()).isNull();
+    }
+
+    @Test
+    @DisplayName("Debería retornar 400 con tipo desconocido cuando el parámetro no declara un tipo esperado")
+    void deberiaRetornar400ConTipoDesconocido_CuandoElParametroNoDeclaraTipoEsperado() throws NoSuchMethodException {
+        // Arrange
+        MethodParameter methodParameter = new MethodParameter(
+            GlobalExceptionHandlerTest.class.getDeclaredMethod("endpointDePrueba"), -1);
+        MethodArgumentTypeMismatchException excepcion = new MethodArgumentTypeMismatchException(
+            "abc", null, "id", methodParameter, null);
+
+        // Act
+        ResponseEntity<ErrorResponse> respuesta = globalExceptionHandler.handleMethodArgumentTypeMismatch(excepcion);
+
+        // Assert
+        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(respuesta.getBody()).isNotNull();
+        assertThat(respuesta.getBody().message())
+            .isEqualTo("El parámetro 'id' contiene un tipo de dato inválido. Se esperaba un valor de tipo desconocido.");
+    }
+
+    @Test
+    @DisplayName("Debería retornar 400 con el mensaje de la regla de negocio cuando se viola una regla")
+    void deberiaRetornar400_CuandoSeViolaUnaReglaDeNegocio() {
+        // Arrange
+        ParametroInvalidoException excepcion = new ParametroInvalidoException(
+            "El parámetro 'sortBy' con valor 'password' no es válido.");
+
+        // Act
+        ResponseEntity<ErrorResponse> respuesta = globalExceptionHandler.handleReglaNegocio(excepcion);
+
+        // Assert
+        ErrorResponse error = errorDe(respuesta, HttpStatus.BAD_REQUEST, "Bad Request");
+        assertThat(error.message()).isEqualTo("El parámetro 'sortBy' con valor 'password' no es válido.");
+        assertThat(error.errors()).isNull();
+        assertThat(error.notFoundIds()).isNull();
+    }
+
+    @Test
+    @DisplayName("Debería retornar 401 genérico cuando falla la autenticación")
+    void deberiaRetornar401_CuandoFallaLaAutenticacion() {
+        // Arrange
+        BadCredentialsException excepcion = new BadCredentialsException("Credenciales inválidas");
+
+        // Act
+        ResponseEntity<ErrorResponse> respuesta = globalExceptionHandler.handleAuthenticationException(excepcion);
+
+        // Assert
+        ErrorResponse error = errorDe(respuesta, HttpStatus.UNAUTHORIZED, "Unauthorized");
+        assertThat(error.message())
+            .isEqualTo("No se encuentra autenticado o el token de acceso es inválido o ha expirado.");
+        assertThat(error.errors()).isNull();
+        assertThat(error.notFoundIds()).isNull();
+    }
+
+    @Test
+    @DisplayName("Debería retornar 403 genérico cuando el acceso es denegado")
+    void deberiaRetornar403_CuandoElAccesoEsDenegado() {
+        // Arrange
+        AccessDeniedException excepcion = new AccessDeniedException("Acceso denegado");
+
+        // Act
+        ResponseEntity<ErrorResponse> respuesta = globalExceptionHandler.handleAccessDeniedException(excepcion);
+
+        // Assert
+        ErrorResponse error = errorDe(respuesta, HttpStatus.FORBIDDEN, "Forbidden");
+        assertThat(error.message()).isEqualTo("No cuenta con los permisos necesarios para acceder a este recurso.");
+        assertThat(error.errors()).isNull();
+        assertThat(error.notFoundIds()).isNull();
     }
 }

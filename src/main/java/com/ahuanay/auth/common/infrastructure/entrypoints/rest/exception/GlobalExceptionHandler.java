@@ -1,6 +1,8 @@
 package com.ahuanay.auth.common.infrastructure.entrypoints.rest.exception;
 
+import com.ahuanay.auth.common.domain.exception.RecursoDuplicadoException;
 import com.ahuanay.auth.common.domain.exception.RecursoNoEncontradoException;
+import com.ahuanay.auth.common.domain.exception.ReglaNegocioException;
 import com.ahuanay.auth.common.infrastructure.entrypoints.rest.dto.ErrorResponse;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
@@ -12,9 +14,12 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -74,6 +79,38 @@ public class GlobalExceptionHandler extends BaseExceptionHandler {
         );
     }
 
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        LOGGER.warn("Type mismatch in request parameter: {}", ex.getMessage());
+
+        Class<?> requiredType = ex.getRequiredType();
+        String tipoEsperado = requiredType != null ? requiredType.getSimpleName() : "desconocido";
+
+        String message = String.format(
+            "El parámetro '%s' contiene un tipo de dato inválido. Se esperaba un valor de tipo %s.",
+            ex.getName(),
+            tipoEsperado
+        );
+
+        return buildErrorResponse(
+            HttpStatus.BAD_REQUEST,
+            "Bad Request",
+            message
+        );
+    }
+
+    @ExceptionHandler(ReglaNegocioException.class)
+    public ResponseEntity<ErrorResponse> handleReglaNegocio(ReglaNegocioException ex) {
+        LOGGER.warn("Business rule violation: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage());
+    }
+
+    @ExceptionHandler(RecursoDuplicadoException.class)
+    public ResponseEntity<ErrorResponse> handleRecursoDuplicado(RecursoDuplicadoException ex) {
+        LOGGER.warn("Duplicate resource error: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.CONFLICT, "Conflict", ex.getMessage());
+    }
+
     @ExceptionHandler(RecursoNoEncontradoException.class)
     public ResponseEntity<ErrorResponse> handleRecursoNoEncontrado(RecursoNoEncontradoException ex) {
         LOGGER.warn("Resource not found: {}", ex.getMessage());
@@ -91,6 +128,26 @@ public class GlobalExceptionHandler extends BaseExceptionHandler {
             HttpStatus.NOT_FOUND,
             "Not Found",
             ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex) {
+        LOGGER.warn("Authentication error: {}", ex.getMessage());
+        return buildErrorResponse(
+            HttpStatus.UNAUTHORIZED,
+            "Unauthorized",
+            "No se encuentra autenticado o el token de acceso es inválido o ha expirado."
+        );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException ex) {
+        LOGGER.warn("Access denied: {}", ex.getMessage());
+        return buildErrorResponse(
+            HttpStatus.FORBIDDEN,
+            "Forbidden",
+            "No cuenta con los permisos necesarios para acceder a este recurso."
         );
     }
 

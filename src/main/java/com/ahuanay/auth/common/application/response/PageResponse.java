@@ -8,6 +8,6 @@ public record PageResponse<T>(
     int pageSize,
     long totalElements,
     int totalPages,
-    boolean last
+    boolean isLast
 ) {
 }

@@ -1,5 +1,6 @@
 package com.ahuanay.auth.rol.infrastructure.adapters.persistence.adapter;
 
+import com.ahuanay.auth.common.infrastructure.utils.JpaQueryUtils;
 import com.ahuanay.auth.rol.application.port.out.RolRepositoryPort;
 import com.ahuanay.auth.rol.application.query.RolQuery;
 import com.ahuanay.auth.rol.domain.model.Rol;
@@ -18,18 +19,20 @@ import org.springframework.stereotype.Repository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 @RequiredArgsConstructor
 public class RolRepositoryAdapter implements RolRepositoryPort {
+
+    private static final Set<String> CAMPOS_ORDENABLES = Set.of("id", "nombre");
 
     private final SpringDataRolRepository rolRepository;
     private final RolMapper rolMapper;
 
     @Override
     public Page<Rol> findAll(RolQuery query) {
-        Sort.Direction direction = Sort.Direction.fromString(query.getDirection());
-        Sort sort = Sort.by(direction, query.getSortBy());
+        Sort sort = JpaQueryUtils.resolverSort(query.getSortBy(), query.getDirection(), CAMPOS_ORDENABLES);
 
         Pageable pageable = (query.getSize() == -1)
             ? Pageable.unpaged(sort)
@@ -38,12 +41,20 @@ public class RolRepositoryAdapter implements RolRepositoryPort {
         Specification<RolEntity> spec = (root, cq, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (query.getNombre() != null && !query.getNombre().isBlank()) {
-                predicates.add(cb.like(root.get("nombre"), "%" + query.getNombre() + "%"));
+                String patron = "%" + JpaQueryUtils.escaparLike(query.getNombre().toLowerCase()) + "%";
+                predicates.add(cb.like(cb.lower(root.get("nombre")), patron, '\\'));
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
         return rolRepository.findAll(spec, pageable).map(rolMapper::toDomain);
+    }
+
+    @Override
+    public List<Rol> findAllByIdIn(Set<Long> ids) {
+        return rolRepository.findAllById(ids).stream()
+            .map(rolMapper::toDomain)
+            .toList();
     }
 
     @Override

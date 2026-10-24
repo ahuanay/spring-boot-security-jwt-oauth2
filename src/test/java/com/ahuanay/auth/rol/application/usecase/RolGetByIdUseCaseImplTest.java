@@ -38,8 +38,8 @@ class RolGetByIdUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Debería obtener por id rol exitosamente cuando el ID existe")
-    void deberiaObtenerPorIdRolExitosamente_CuandoElIdExiste() {
+    @DisplayName("Debería obtener el rol exitosamente cuando el ID existe")
+    void deberiaObtenerRolExitosamente_CuandoElIdExiste() {
         // Arrange
         when(rolRepositoryPort.findById(id)).thenReturn(Optional.of(rolDomain));
 

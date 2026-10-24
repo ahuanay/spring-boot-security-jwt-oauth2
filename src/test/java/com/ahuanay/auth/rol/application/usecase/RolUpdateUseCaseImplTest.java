@@ -2,11 +2,11 @@ package com.ahuanay.auth.rol.application.usecase;
 
 import com.ahuanay.auth.common.domain.exception.RecursoNoEncontradoException;
 import com.ahuanay.auth.permiso.application.port.out.PermisoRepositoryPort;
+import com.ahuanay.auth.permiso.domain.model.Permiso;
 import com.ahuanay.auth.rol.application.command.RolCommand;
 import com.ahuanay.auth.rol.application.port.out.RolRepositoryPort;
 import com.ahuanay.auth.rol.domain.exception.RolDuplicadoException;
 import com.ahuanay.auth.rol.domain.model.Rol;
-import com.ahuanay.auth.permiso.domain.model.Permiso;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -52,8 +52,8 @@ class RolUpdateUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Debería actualizar rol exitosamente cuando todos los parámetros son válidos")
-    void deberiaActualizarRolExitosamente_CuandoTodosParametrosSonValidos() {
+    @DisplayName("Debería actualizar el rol exitosamente cuando todos los parámetros son válidos")
+    void deberiaActualizarRolExitosamente_CuandoTodosLosParametrosSonValidos() {
         // Arrange
         var permiso1 = new Permiso(1L, "PERMISO_CREATE");
         var permiso2 = new Permiso(2L, "PERMISO_DELETE");
@@ -99,7 +99,7 @@ class RolUpdateUseCaseImplTest {
 
     @Test
     @DisplayName("Debería lanzar RolDuplicadoException cuando ya existe otro rol con el mismo nombre")
-    void deberiaLanzarRolDuplicadoException_CuandoYaExisteOtroRolConMismoNombre() {
+    void deberiaLanzarRolDuplicadoException_CuandoYaExisteOtroRolConElMismoNombre() {
         // Arrange
         var otroRol = new Rol(2L, command.nombre(), Set.of(new Permiso(1L, "PERMISO_CREATE")));
 

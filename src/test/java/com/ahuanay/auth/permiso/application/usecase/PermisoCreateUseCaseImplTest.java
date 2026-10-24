@@ -40,7 +40,7 @@ class PermisoCreateUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Debería crear un permiso exitosamente cuando no existe duplicado")
+    @DisplayName("Debería crear el permiso exitosamente cuando no existe duplicado")
     void deberiaCrearPermisoExitosamente_CuandoNoExisteDuplicado() {
         // Arrange
         when(permisoRepositoryPort.findByNombre(command.nombre())).thenReturn(Optional.empty());
@@ -74,7 +74,7 @@ class PermisoCreateUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Debería lanzar PermisoInvalidoException cuando el nombre del comando es inválido")
+    @DisplayName("Debería lanzar PermisoInvalidoException cuando el nombre del comando está vacío")
     void deberiaLanzarPermisoInvalidoException_CuandoElNombreEstaVacio() {
         // Arrange
         PermisoCommand comandoInvalido = new PermisoCommand("");

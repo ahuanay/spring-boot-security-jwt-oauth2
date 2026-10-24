@@ -1,16 +1,37 @@
 app:
+  security:
+    default-role: ${APP_DEFAULT_ROLE:PACIENTE}
+    public-paths: /api/v1/auth/login,/api/v1/auth/register,/api/v1/auth/refresh,/api/v1/auth/forgot-password,/api/v1/auth/reset-password,/api/v1/auth/otp/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**
+    password-reset:
+      expiration-minutes: ${PASSWORD_RESET_EXPIRATION_MINUTES:30}
+      frontend-url: ${PASSWORD_RESET_FRONTEND_URL}
+    mfa:
+      expiration-minutes: ${MFA_OTP_EXPIRATION_MINUTES:5}
+      max-attempts: ${MFA_OTP_MAX_ATTEMPTS:5}
+      resend-cooldown-seconds: ${MFA_OTP_RESEND_COOLDOWN_SECONDS:60}
+  mail:
+    mode: ${MAIL_MODE:smtp}
   timezone: ${APP_TIMEZONE:America/Lima}
 
 server:
   port: ${PORT:8080}
 
 spring:
+  mail:
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
   datasource:
     url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
+    open-in-view: false # Se desactiva para eliminar el WARNING
     hibernate:
       ddl-auto: validate
     show-sql: false
@@ -23,10 +44,26 @@ spring:
   jackson:
     time-zone: ${app.timezone}
     date-format: yyyy-MM-dd'T'HH:mm:ss
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: "${GITHUB_CLIENT_ID}"
+            client-secret: "${GITHUB_CLIENT_SECRET}"
+            scope:
+              - user:email
+              - read:user
+          google:
+            client-id: "${GOOGLE_CLIENT_ID}"
+            client-secret: "${GOOGLE_CLIENT_SECRET}"
+            scope:
+              - email
+              - profile
 
 logging:
   file:
-    name: /var/log/ahuanay/auth-service.log
+    name: logs/auth-service.log # Ruta relativa accesible por appuser dentro de /app
   logback:
     rollingpolicy:
       max-file-size: 50MB

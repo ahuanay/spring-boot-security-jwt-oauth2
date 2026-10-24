@@ -12,6 +12,7 @@ public interface PermisoRepositoryPort {
     Page<Permiso> findAll(PermisoQuery query);
     Optional<Permiso> findById(Long id);
     List<Permiso> findAllByIdIn(Set<Long> ids);
+    List<Long> findRolIdsByPermisoId(Long permisoId);
     Optional<Permiso> findByNombre(String nombre);
     Permiso save(Permiso permiso);
     void deleteById(Long id);

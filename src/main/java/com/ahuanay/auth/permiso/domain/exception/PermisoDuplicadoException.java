@@ -1,6 +1,8 @@
 package com.ahuanay.auth.permiso.domain.exception;
 
-public class PermisoDuplicadoException extends RuntimeException {
+import com.ahuanay.auth.common.domain.exception.RecursoDuplicadoException;
+
+public class PermisoDuplicadoException extends RecursoDuplicadoException {
     public PermisoDuplicadoException(String message) {
         super(message);
     }

@@ -42,8 +42,8 @@ class PermisoUpdateUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Debería actualizar permiso exitosamente cuando todos los parámetros son válidos")
-    void deberiaActualizarPermisoExitosamente_CuandoTodosParametrosSonValidos() {
+    @DisplayName("Debería actualizar el permiso exitosamente cuando todos los parámetros son válidos")
+    void deberiaActualizarPermisoExitosamente_CuandoTodosLosParametrosSonValidos() {
         // Arrange
         when(permisoRepositoryPort.findById(id)).thenReturn(Optional.of(permisoExistente));
         when(permisoRepositoryPort.findByNombre(command.nombre())).thenReturn(Optional.empty());
@@ -79,7 +79,7 @@ class PermisoUpdateUseCaseImplTest {
 
     @Test
     @DisplayName("Debería lanzar PermisoDuplicadoException cuando ya existe otro permiso con el mismo nombre")
-    void deberiaLanzarPermisoDuplicadoException_CuandoYaExisteOtroPermisoConMismoNombre() {
+    void deberiaLanzarPermisoDuplicadoException_CuandoYaExisteOtroPermisoConElMismoNombre() {
         // Arrange
         Permiso otroPermiso = new Permiso(2L, "PERMISO_UPDATE");
 

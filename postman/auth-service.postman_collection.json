@@ -1,0 +1,517 @@
+{
+  "info": {
+    "_postman_id": "7f3e1a2b-4c5d-6e7f-8a9b-0c1d2e3f4a5b",
+    "name": "Auth Service (JWT + OAuth2)",
+    "description": "Colección del servicio de Autenticación y Autorización (Spring Boot 3.5 / Arquitectura Hexagonal).\n\nCubre: registro, login dual (con/ sin 2FA por OTP), rotación de refresh tokens, recuperación de contraseña, activación/desactivación del doble factor, login social (Google/GitHub) y CRUD de roles y permisos.\n\n## Variables útiles\n\n- `accessToken` / `refreshToken` / `tokenMfa`: **se llenan automáticamente** tras Login, Verificar OTP y Refresh.\n- Los endpoints protegidos usan Bearer `{{accessToken}}` (definido a nivel de colección).\n- `resetToken`: copia manualmente el token del email en MailDev (http://localhost:1080) para `/reset-password`.\n\n## Notas\n\n- Base por defecto: `http://localhost:8081` (variable `baseUrl`).\n- La política de contraseñas exige 8–72 caracteres con mayúscula, minúscula, número y símbolo de `@$!%*?&#+-_`.\n- Los roles sembrados son ADMIN, DOCTOR y PACIENTE; favor de no modificar/borrar los IDs sembrados.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{accessToken}}", "type": "string" }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": []
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": []
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8081", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
+    { "key": "tokenMfa", "value": "", "type": "string" },
+    { "key": "adminEmail", "value": "admin@mail.com", "type": "string" },
+    { "key": "adminPassword", "value": "SecurePassword123*", "type": "string" },
+    { "key": "nuevoEmail", "value": "paciente.demo@mail.com", "type": "string" },
+    { "key": "nuevaPassword", "value": "SecurePassword123*", "type": "string" },
+    { "key": "rolId", "value": "4", "type": "string" },
+    { "key": "permisoId", "value": "9", "type": "string" },
+    { "key": "d", "value": "1", "type": "string" },
+    { "key": "resetToken", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Autenticación (público)",
+      "item": [
+        {
+          "name": "Registrar usuario",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{nuevoEmail}}\",\n  \"password\": \"{{nuevaPassword}}\",\n  \"roleIds\": [3]\n}"
+            },
+            "description": "Crea un usuario LOCAL con roles asignados.\n\n- **201** → usuario creado.\n- **400** → validación (email, contraseña débil, sin roles).\n- **404** → rol inexistente.\n- **409** → email ya registrado."
+          }
+        },
+        {
+          "name": "Iniciar sesión",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login respondió 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "const body = pm.response.json();",
+                  "if (body.mfaRequerido == true) {",
+                  "  pm.collectionVariables.set('tokenMfa', body.tokenMfa);",
+                  "  pm.collectionVariables.unset('accessToken');",
+                  "  pm.collectionVariables.unset('refreshToken');",
+                  "  console.log('Desafío 2FA activo: usa /otp/verificar con el código del email.');",
+                  "} else {",
+                  "  pm.collectionVariables.set('accessToken', body.accessToken || '');",
+                  "  pm.collectionVariables.set('refreshToken', body.refreshToken || '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "description": "Login dual.\n\n- Si el usuario **no** tiene 2FA: responde `accessToken`, `refreshToken` y `tokenType=Bearer` (se guardan en variables de colección).\n- Si el usuario **sí** tiene 2FA: responde `mfaRequerido=true` + `tokenMfa` (se guarda en `tokenMfa`) y NO entrega tokens; el código OTP llega al email y se verifica con `/otp/verificar`.\n- **401** → credenciales inválidas o usuario inactivo."
+          }
+        },
+        {
+          "name": "Renovar tokens (rotación)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Token renovado', () => pm.expect(pm.response.code).to.eql(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('accessToken', body.accessToken || '');",
+                  "pm.collectionVariables.set('refreshToken', body.refreshToken || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "description": "Genera un **nuevo** Access Token y Refresh Token a partir del refresh token vigente (rotación: el anterior queda invalidado).\n\n- **401** → refresh token inválido, reutilizado o expirado."
+          }
+        },
+        {
+          "name": "Solicitar recuperación de contraseña",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "forgot-password"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\"\n}"
+            },
+            "description": "Envía un enlace con token de recuperación al email (solo usuarios locales).\n\n- **200** siempre con mensaje genérico (no revela si el email existe).\n- El token llega al email de MailDev: cópialo en la variable `resetToken` para el siguiente request."
+          }
+        },
+        {
+          "name": "Restablecer contraseña",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "reset-password"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{resetToken}}\",\n  \"newPassword\": \"{{nuevaPassword}}\"\n}"
+            },
+            "description": "Restablece la contraseña con el token recibido por email (una sola vez) y **revoca todas las sesiones activas** del usuario.\n\n- **200** → contraseña restablecida.\n- **400** → nueva contraseña no cumple la política (8–72, mayúscula, minúscula, número y símbolo).\n- **401** → token inválido, ya usado o expirado."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Doble factor — verificación OTP (público)",
+      "item": [
+        {
+          "name": "Verificar código OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('OTP verificado y tokens entregados', () => pm.expect(pm.response.code).to.eql(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('accessToken', body.accessToken || '');",
+                  "pm.collectionVariables.set('refreshToken', body.refreshToken || '');",
+                  "pm.collectionVariables.unset('tokenMfa');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/otp/verificar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "otp", "verificar"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tokenMfa\": \"{{tokenMfa}}\",\n  \"codigo\": \"123456\"\n}"
+            },
+            "description": "Verifica el código de 6 dígitos enviado al email usando el `tokenMfa` del login.\n\n- **200** → entrega `accessToken` + `refreshToken` (se guardan en variables).\n- **401** → código incorrecto o token intermedio inválido/expirado.\n- **429** → se agotaron los intentos; vuelve a `/login`."
+          }
+        },
+        {
+          "name": "Reenviar código OTP",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/otp/reenviar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "otp", "reenviar"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tokenMfa\": \"{{tokenMfa}}\"\n}"
+            },
+            "description": "Genera y envía un nuevo código para el desafío en curso.\n\n- El `tokenMfa` sigue siendo válido.\n- **429** → aún bloqueado por el cooldown entre reenvíos (60 s por defecto)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Doble factor — activación (protegido)",
+      "item": [
+        {
+          "name": "Iniciar activación del doble factor",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/mfa/activar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "mfa", "activar"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "description": "Envía el código de activación al email del usuario autenticado tras validar su contraseña.\n\n- **409** → 2FA ya activado, o el usuario es de Google/GitHub (no disponible).\n- Requiere Bearer `{{accessToken}}`."
+          }
+        },
+        {
+          "name": "Confirmar activación del doble factor",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/mfa/confirmar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "mfa", "confirmar"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"123456\"\n}"
+            },
+            "description": "Activa el doble factor con el código recibido por email (5 intentos máx.; al agotarse hay que volver a activar).\n\n- **200** → doble factor activado.\n- **429** → intentos agotados."
+          }
+        },
+        {
+          "name": "Desactivar doble factor",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/mfa",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "mfa"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "description": "Desactiva el doble factor del usuario autenticado tras validar su contraseña y cancela los desafíos OTP pendientes.\n\n- **409** → el doble factor no estaba activado."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login social",
+      "item": [
+        {
+          "name": "Iniciar flujo OAuth2 (Google)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/oauth2/authorization/google",
+              "host": ["{{baseUrl}}"],
+              "path": ["oauth2", "authorization", "google"]
+            },
+            "description": "Redirige a Google para autenticarse (**ejecutar en navegador**: Postman intercepta el flujo con OAuth 2.0 helper o abriendo esta URL en el browser).\n\nAl terminar, el backend entrega el `AuthResponse` con tokens mediante el success handler OAuth2. Los usuarios sociales no pueden activar 2FA y no reciben reset de contraseña por email."
+          }
+        },
+        {
+          "name": "Iniciar flujo OAuth2 (GitHub)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/oauth2/authorization/github",
+              "host": ["{{baseUrl}}"],
+              "path": ["oauth2", "authorization", "github"]
+            },
+            "description": "Redirige a GitHub para autenticarse (**ejecutar en navegador**). Comportamiento análogo a Google."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Roles (protegido)",
+      "item": [
+        {
+          "name": "Listar roles (paginado)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/roles?page=0&size=10&sortBy=id&direction=ASC&nombre=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "roles"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" },
+                { "key": "sortBy", "value": "id" },
+                { "key": "direction", "value": "ASC" },
+                { "key": "nombre", "value": "" }
+              ]
+            },
+            "description": "Lista paginada y filtrada de roles.\n\n- `size=-1` desactiva la paginación (retorna todos).\n- Permisos requeridos: `ROL_READ` o rol `ADMIN`.\n- **400** → `sortBy`/`direction` inválidos."
+          }
+        },
+        {
+          "name": "Obtener rol por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/roles/{{rolId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "roles", "{{rolId}}"]
+            },
+            "description": "Detalles de un rol con sus permisos. `{{rolId}}` por defecto es 4 (no toques los sembrados 1-3). Requiere `ROL_READ`."
+          }
+        },
+        {
+          "name": "Crear rol",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/roles",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "roles"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"PACIENTE_ESCRITURA_{{d}}\",\n  \"permisoIds\": [1]\n}"
+            },
+            "description": "Crea un rol con permisos asignados. Requiere `ROL_CREATE` o `ADMIN`.\n\n- **409** → nombre duplicado.\n- **404** → algún permiso no existe."
+          }
+        },
+        {
+          "name": "Actualizar rol",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/roles/{{rolId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "roles", "{{rolId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"PACIENTE_EDITADO_{{d}}\",\n  \"permisoIds\": [1, 2]\n}"
+            },
+            "description": "Modifica nombre y/o permisos del rol. Requiere `ROL_UPDATE`.\n\n- **404** → rol inexistente o permisos inexistentes.\n- **409** → nombre ya usado por otro rol."
+          }
+        },
+        {
+          "name": "Eliminar rol",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/roles/{{rolId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "roles", "{{rolId}}"]
+            },
+            "description": "Elimina el rol. Requiere `ROL_DELETE`. **204** sin contenido; **404** si no existe."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Permisos (protegido)",
+      "item": [
+        {
+          "name": "Listar permisos (paginado)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/permisos?page=0&size=10&sortBy=id&direction=ASC&nombre=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "permisos"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" },
+                { "key": "sortBy", "value": "id" },
+                { "key": "direction", "value": "ASC" },
+                { "key": "nombre", "value": "" }
+              ]
+            },
+            "description": "Lista paginada y filtrada de permisos atómicos. `size=-1` retorna todos. Requiere `PERMISO_READ` o `ADMIN`."
+          }
+        },
+        {
+          "name": "Obtener permiso por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/permisos/{{permisoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "permisos", "{{permisoId}}"]
+            },
+            "description": "Detalles de un permiso por ID. Requiere `PERMISO_READ`."
+          }
+        },
+        {
+          "name": "Crear permiso",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/permisos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "permisos"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"PERMISO_DEMO_{{d}}\"\n}"
+            },
+            "description": "Crea un permiso atómico. Requiere `PERMISO_CREATE`.\n\n- **409** → nombre duplicado."
+          }
+        },
+        {
+          "name": "Actualizar permiso",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/permisos/{{permisoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "permisos", "{{permisoId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"PERMISO_DEMO_EDITADO_{{d}}\"\n}"
+            },
+            "description": "Renombra un permiso. Requiere `PERMISO_UPDATE`. No uses los permisos sembrados (PERMISO_*/ROL_*)."
+          }
+        },
+        {
+          "name": "Eliminar permiso",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/permisos/{{permisoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "permisos", "{{permisoId}}"]
+            },
+            "description": "Elimina el permiso. Requiere `PERMISO_DELETE`.\n\n- **409** → el permiso está asignado a uno o más roles."
+          }
+        }
+      ]
+    }
+  ]
+}

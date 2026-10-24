@@ -48,3 +48,24 @@ buildNumber.properties
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# AI Assistants / Copilotos de código
+# Claude Code (settings, skills y sesiones locales) + memoria de agente de Claude/OpenCode/Codex
+.claude/
+CLAUDE.md
+AGENTS.md
+.codex/
+# Cursor
+.cursor/
+.cursorrules
+.cursorignore
+# Otros asistentes: Windsurf, Trae, Junie, Continue, Serena, Aider
+.windsurf/
+.trae/
+.junie/
+.continue/
+.continuerc
+.serena/
+.aider*
+# Copilot
+.github/copilot-instructions.md
